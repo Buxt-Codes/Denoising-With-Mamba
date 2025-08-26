@@ -35,3 +35,6 @@ class NomicEmbedder:
         batch_vectors = sum_embeddings / sum_mask  
 
         return batch_vectors
+    
+    def to(self, device):
+        self.model.to(device)
