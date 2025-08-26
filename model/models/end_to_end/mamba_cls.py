@@ -1,9 +1,10 @@
 import torch.nn as nn
-from decoder import MambaPooledEncoder, ClassifierHead, EmbeddingHead
+from ..decoder import MambaCLSEncoder, ClassifierHead, EmbeddingHead
 
-class MambaPooled(nn.Module):
+class MambaCLS(nn.Module):
     def __init__(
         self,
+        num_layers : int,
         d_input : int,
         d_model : int,
         d_context : int,
@@ -15,6 +16,7 @@ class MambaPooled(nn.Module):
         super().__init__()
         
         mamba_par = {
+            'num_layers' : num_layers,
             'd_input' : d_input,
             'd_context': d_context,
             'd_model' : d_model,
@@ -24,13 +26,14 @@ class MambaPooled(nn.Module):
             'parallel': parallel,
         }
 
-        self.mamba = MambaPooledEncoder(**mamba_par)
+        self.mamba = MambaCLSEncoder(**mamba_par)
         
-        self.classifier_head = ClassifierHead(d_model)
-        self.embedding_head = EmbeddingHead(d_model)
+        self.classifier_head = ClassifierHead(d_input)
+        self.embedding_head = EmbeddingHead(d_input)
     
     def forward(self, x, context, return_embeddings=False):
-        x = self.mamba(x, context)
+        x, _ = self.mamba(x, context)
+        x = x.mean(dim=1)
         if return_embeddings:
             return self.embedding_head(x)
         else:

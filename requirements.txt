@@ -1,6 +1,7 @@
-einops==0.7.0
-torch==2.0.1
+einops
+torch
 transformers
 lightly
 tqdm
 scikit-learn
+tensorboard

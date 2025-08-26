@@ -62,13 +62,13 @@ def contrastive_training(
         running_loss = 0.0
         num_batches = len(train_loader)
 
-        for batch_idx, (context, inputs, targets) in enumerate(tqdm(train_loader, desc=f"Epoch {epoch}")):
+        for batch_idx, (contexts, inputs, targets) in enumerate(tqdm(train_loader, desc=f"Epoch {epoch}")):
             targets = targets.to(device)
-            context_embed = embedder.embed(context).squeeze(0)
+            contexts_embed = embedder.embed(contexts)
             inputs_embed = embedder.embed(inputs,return_tokens=True)
             
             optimizer.zero_grad()
-            outputs = decoder(inputs_embed, context_embed, return_embeddings=True)
+            outputs = decoder(inputs_embed, contexts_embed, return_embeddings=True)
             loss = loss_fn(outputs, targets)
             loss.backward()
             optimizer.step()

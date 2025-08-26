@@ -1,3 +1,3 @@
-from mamba_cls import MambaCLSEncoder
+from .mamba_cls import MambaCLSEncoder
 
 __all__ = ['MambaCLSEncoder']

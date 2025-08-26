@@ -41,6 +41,7 @@ class CrossAttentionBlock(nn.Module):
         self.norm2 = nn.LayerNorm(d_model)
     
     def forward(self, seq, context):
+        context = self.context_proj(context).unsqueeze(1)
         out1, _ = self.cross_attention(query=seq, key=context, value=context)
         out1 = self.norm1(out1 + seq)
 

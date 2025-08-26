@@ -64,13 +64,13 @@ def classification_training(
         all_preds = []
         num_batches = len(train_loader)
 
-        for batch_idx, (context, inputs, targets) in enumerate(tqdm(train_loader, desc=f"Epoch {epoch}")):
+        for batch_idx, (contexts, inputs, targets) in enumerate(tqdm(train_loader, desc=f"Epoch {epoch}")):
             targets = targets.float().to(device)  
-            context_embed = embedder.embed(context).squeeze(0)
+            contexts_embed = embedder.embed(contexts).squeeze(0)
             inputs_embed = embedder.embed(inputs, return_tokens=True)
 
             optimizer.zero_grad()
-            outputs = decoder(inputs_embed, context_embed).squeeze(-1)
+            outputs = decoder(inputs_embed, contexts_embed).squeeze(-1)
             loss = loss_fn(outputs, targets)
             loss.backward()
             optimizer.step()

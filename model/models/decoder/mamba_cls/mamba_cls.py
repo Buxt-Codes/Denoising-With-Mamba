@@ -7,6 +7,7 @@ from einops import rearrange
 from typing import Tuple
 from torch.nn.functional import silu
 from torch.nn.functional import softplus
+import math
 
 from .utils import default
 from .utils import RMSNorm
@@ -44,6 +45,8 @@ class MambaCLSEncoder(nn.Module):
             'ker_size': ker_size,
             'parallel': parallel,
         }
+
+        self.parallel = parallel
         
         # CLS Token
         self.cls_token = nn.Parameter(torch.randn(1, 1, d_input))
@@ -75,11 +78,22 @@ class MambaCLSEncoder(nn.Module):
         cls_tok = self.cls_token.expand(b, -1, -1)
         seq = torch.cat([cls_tok, seq], dim=1)
         
+        pad_len = 0
+        if self.parallel:
+            next_pow2 = 2 ** math.ceil(math.log2(seq.shape[1]))
+            pad_len = next_pow2 - seq.shape[1]
+            if pad_len > 0:
+                seq = torch.cat([seq, torch.zeros(b, pad_len, d, device=seq.device)], dim=1)
+
+
         for mamba, norm in self.layers: # type: ignore
             # Apply the MambaBlock and normalize the
             # output plus the residual connection
             out, cache = mamba(norm(seq), context, cache)
             seq = out + seq
+        
+        if pad_len > 0:
+            seq = seq[:, :l, :]
             
         return seq, cache
         

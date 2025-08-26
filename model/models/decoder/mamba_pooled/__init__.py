@@ -1,3 +1,3 @@
-from mamba_pooled import MambaPooledEncoder
+from .mamba_pooled import MambaPooledEncoder
 
 __all__ = ['MambaPooledEncoder']

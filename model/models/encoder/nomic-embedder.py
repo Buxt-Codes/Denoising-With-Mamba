@@ -2,7 +2,7 @@ from transformers import AutoTokenizer, AutoModel
 import torch
 
 class NomicEmbedder:
-    def __init__(self, model_name="nomic-ai/nomic-embed-text-v1", device=None):
+    def __init__(self, model_name="nomic-ai/nomic-embed-text-v1.5"):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModel.from_pretrained(model_name)
         self.model.eval()

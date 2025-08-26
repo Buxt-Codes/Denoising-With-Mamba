@@ -1,5 +1,5 @@
 import torch.nn as nn
-from decoder import CrossAttentionEncoder, ClassifierHead, EmbeddingHead
+from ..decoder import CrossAttentionEncoder, ClassifierHead, EmbeddingHead
 
 class CrossAttentionTransformer(nn.Module):
     def __init__(
@@ -26,7 +26,8 @@ class CrossAttentionTransformer(nn.Module):
         self.embedding_head = EmbeddingHead(d_model)
     
     def forward(self, x, context, return_embeddings=False):
-        x = self.mamba(x, context)
+        x = self.transformer(x, context)
+        
         if return_embeddings:
             return self.embedding_head(x)
         else:
