@@ -13,7 +13,7 @@ from .utils import RMSNorm
 from .utils import Cache
 from .pscan import pscan
 
-class MambaCLS(nn.Module):
+class MambaCLSEncoder(nn.Module):
     '''
     Class representing the Mamba model as introduced in Gu & Dao (2023)
     (see paper: https://arxiv.org/abs/2312.00752). It is a State Space

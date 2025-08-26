@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-class CrossAttentionTransformer(nn.Module):
+class CrossAttentionEncoder(nn.Module):
     def __init__(
         self,
         d_input : int,
