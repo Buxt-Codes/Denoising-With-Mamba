@@ -5,3 +5,5 @@ lightly
 tqdm
 scikit-learn
 tensorboard
+vllm
+accelerate
