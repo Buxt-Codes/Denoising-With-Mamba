@@ -27,8 +27,8 @@ class CrossAttentionTransformer(nn.Module):
     
     def forward(self, x, context, return_embeddings=False):
         x = self.transformer(x, context)
-        
+        x_pooled = x.mean(dim=1)
         if return_embeddings:
-            return self.embedding_head(x)
+            return self.embedding_head(x_pooled)
         else:
-            return self.classifier_head(x)
+            return self.classifier_head(x_pooled)

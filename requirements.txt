@@ -7,3 +7,6 @@ scikit-learn
 tensorboard
 vllm
 accelerate
+mamba-ssm
+causal-conv1d
+faker
