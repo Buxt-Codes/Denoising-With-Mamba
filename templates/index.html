@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>ML Review Quality &amp; Relevancy Dashboard</title>
+    <link href="/static/styles/style.css" rel="stylesheet" />
+    <script defer="True" src="/static/js/script.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ML Review Quality &amp; Relevancy Dashboard</h1>
+            <p>Advanced machine learning system for evaluating Google location reviews</p>
+        </div>
+        <!-- Overall Statistics -->
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value" id="totalReviews">12,847</div>
+                <div class="stat-label">Total Reviews Analyzed</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="spamDetected">1,294</div>
+                <div class="stat-label">Spam Reviews Detected</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="policyViolations">847</div>
+                <div class="stat-label">Policy Violations</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="accuracy">94.2%</div>
+                <div class="stat-label">Model Accuracy</div>
+            </div>
+        </div>
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Quality Distribution -->
+            <div class="card">
+                <h2 class="card-title">Review Quality Distribution</h2>
+                <div class="chart-container">
+                    <canvas id="qualityChart"></canvas>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #2ecc71;"></div>
+                        <span>High Quality</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f39c12;"></div>
+                        <span>Medium Quality</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e74c3c;"></div>
+                        <span>Low Quality</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Policy Violations -->
+            <div class="card">
+                <h2 class="card-title">Policy Violation Types</h2>
+                <div class="chart-container">
+                    <canvas id="policyChart"></canvas>
+                </div>
+            </div>
+            <!-- Relevancy Scores -->
+            <div class="card">
+                <h2 class="card-title">Relevancy Score Distribution</h2>
+                <div class="chart-container">
+                    <canvas id="relevancyChart"></canvas>
+                </div>
+            </div>
+            <!-- Temporal Analysis -->
+            <div class="card">
+                <h2 class="card-title">Review Quality Trends</h2>
+                <div class="chart-container">
+                    <canvas id="temporalChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <!-- Real-time Prediction Section -->
+        <div class="card real-time-section">
+            <h2 class="card-title">Real-time Review Analysis</h2>
+            <div class="input-section">
+                <div class="input-methods">
+                    <div class="input-tabs">
+                        <div class="input-tab active" onclick="switchInputMethod('text')">
+                            📝 Text Input
+                        </div>
+                        <div class="input-tab" onclick="switchInputMethod('file')">
+                            📁 File Upload
+                        </div>
+                    </div>
+                    <div class="input-content active" id="textInput">
+                        <textarea class="review-input" id="reviewText"
+                            placeholder="Enter a review to analyze... (e.g., 'Great restaurant with amazing food and friendly staff!')"></textarea>
+                    </div>
+                    <div class="input-content" id="fileInput">
+                        <div class="file-upload-area" onclick="triggerFileUpload()" ondragleave="handleDragLeave(event)"
+                            ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+                            <div class="file-upload-icon">📁</div>
+                            <div class="file-upload-text">Drop files here or click to upload</div>
+                            <div class="file-upload-subtext">Supports CSV, TXT, JSON files with review data</div>
+                        </div>
+                        <input accept=".csv,.txt,.json" class="file-input" id="fileInputElement" multiple=""
+                            onchange="handleFileSelect(event)" type="file" />
+                        <div class="uploaded-files" id="uploadedFiles">
+                            <!-- Uploaded files will appear here -->
+                        </div>
+                        <div class="batch-analysis" id="batchAnalysis">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill">0%</div>
+                            </div>
+                            <div id="batchResults"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="locationType">Location Type</label>
+                        <select id="locationType">
+                            <option value="restaurant">Restaurant</option>
+                            <option value="hotel">Hotel</option>
+                            <option value="retail">Retail Store</option>
+                            <option value="service">Service Business</option>
+                            <option value="entertainment">Entertainment</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="reviewerHistory">Reviewer History</label>
+                        <select id="reviewerHistory">
+                            <option value="new">New Reviewer</option>
+                            <option value="regular">Regular Reviewer</option>
+                            <option value="verified">Verified Reviewer</option>
+                        </select>
+                    </div>
+                    <button class="analyze-btn" onclick="analyzeContent()">
+                        <span id="analyzeButtonText">Analyze Review</span>
+                    </button>
+                </div>
+            </div>
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <div class="result-card">
+                    <div class="result-value" id="qualityScore">--</div>
+                    <div class="result-label">Quality Score</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-value" id="relevancyScore">--</div>
+                    <div class="result-label">Relevancy Score</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-value" id="spamProbability">--</div>
+                    <div class="result-label">Spam Probability</div>
+                </div>
+            </div>
+            <div class="policy-violations" id="policyViolations" style="display: none;">
+                <!-- Policy violation tags will be inserted here -->
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
