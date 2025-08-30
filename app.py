@@ -24,14 +24,14 @@ def analyse(batch: str):
         payload = request.get_json()
         reviews = [item["review"] for item in payload]
         locations = [item["location"] for item in payload]
-        print(payload)
+
     else:
         review = request.args.get("review")
         location = request.args.get("location")
         reviews = [review]
         locations = [location]
     # labels, confidences = review_classifier.classify(reviews, locations)
-    result = {}
+    result = []
     labels = [1 for i in range(len(reviews))]
     confidences = labels.copy()
     for i in range(len(reviews)):
@@ -42,9 +42,8 @@ def analyse(batch: str):
                 "label": labels[i]
             }
         )
-    print(jsonify(result))
 
-    return {}
+    return json.dumps(result)
 
 
 if __name__ == "__main__":
