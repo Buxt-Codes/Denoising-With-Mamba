@@ -20,14 +20,15 @@ def index():
 @app.route("/api/<batch>", methods=["POST"])
 def analyse(batch: str):
     if batch == "analyze-batch":
-        data = request.get_json()
-        print(data)
-        
+        payload = request.get_json()
+        reviews = [item["review"] for item in payload]
+        locations = [item["location"] for item in payload]
     else:
-        review = request.args.get("review")
-        location = request.args.get("location")
-        data = [[review]]
-    # result = model.analyse(data)
+        review = request.args.get("review", "")
+        location = request.args.get("location", "")
+        reviews = [review]
+        locations = [location]
+    labels, confidence = review_classifier.classify(reviews, locations)
     result = """[
   {
     "location": "macs",

@@ -42,7 +42,7 @@ The model was trained over a small number of epochs, 10, due to computational re
 ⦁	**CosineAnnealingLR Scheduler:** As the model's loss was extremely low over the training data, it used the scheduler to ensure that it did not overshoot the minima. 
 
 #### **4. Results**
-Our model achieved **97% accuracy and F1 scoe, outperforming our baseline of a cross-attention Transformer by +1% absolute improvement. Importantly, these gains were achieved while using fewer computational resources due to the efficiency of the Mamba decoder.
+Our model achieved **97%** accuracy and F1 score, outperforming our baseline of a cross-attention Transformer by +1% absolute improvement. Importantly, these gains were achieved while using fewer computational resources due to the efficiency of the Mamba decoder.
 
 #### **5. Additional Tests**
 We conducted additional tests in order to see the importance of our FiLM selection function as well as the contextual information that the location's metadata provides. With the FiLM selection function, our model's validation accuracy managed to reach 97% while without, it drops to 55% meaning that the model could not learn any meaningful patterns. It can be taken that the model is unable to discern relevant reviews form irrelevant reviews without the location's metadata, showing the reliance of the model on the specific location context to make conclusions. These results support our choice in the modification of the selection function, showing how the model is also not simply learning patterns in the reviews but rather learning how the reviews are linked to the locations and then classifying from there.
