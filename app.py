@@ -4,8 +4,9 @@ from flask import jsonify
 import json
 from model import ReviewClassifier
 
-review_classifier = ReviewClassifier(model_path="model/review_classifier/decoder/mamba_model/binary_classification_decoder.pt",
-                                      encoder_path="model/review_classifier/embedder/nomic_model")
+review_classifier = ReviewClassifier(model_path="model/review_classifier/decoder/mamba_model/multi_classification_decoder.pt",
+                                      encoder_path="model/review_classifier/embedder/nomic_model",
+                                      multi_classes=True)
 app = Flask(__name__, template_folder='templates')
 
 
@@ -32,8 +33,6 @@ def analyse(batch: str):
         locations = [location]
     labels, confidences = review_classifier.classify(reviews, locations)
     result = []
-    # labels = [1 for i in range(len(reviews))]
-    # confidences = labels.copy()
     for i in range(len(reviews)):
         result.append(
             {
@@ -42,7 +41,6 @@ def analyse(batch: str):
                 "label": labels[i][0]
             }
         )
-
     return json.dumps(result)
 
 
