@@ -234,7 +234,6 @@
                 margin-bottom: 4px;
             }
 
-            <section class="charts"><div class="card"><h3>Policy Violation Types</h3><div class="chart-box"><canvas id="policyChart"></canvas></div></div><div class="card"><h3>Confidence Score Distribution</h3><div class="chart-box"><canvas id="confidenceChart"></canvas></div></div><div class="card"><h3>Review Quality to Confidence</h3><div class="chart-box"><canvas id="temporalChart"></canvas></div></div></section></div><div><button id="exportBtn" class="btn">Export CSV</button></div>
             
             .file-upload-hint {
                 color: var(--muted);
@@ -531,6 +530,9 @@
                 </div>
             </section>
         </div>
+          <div>
+    <button id="exportBtn" class="btn">Export CSV</button>
+  </div>
 
         <script>
             // Global variables
@@ -553,13 +555,11 @@
             };
 
             document.getElementById("exportBtn").addEventListener("click", function () {
-                fetch("/export_data")
-                    .then(response => response.json())
-                    .then(data => {
+                
                         // Convert JSON → CSV
                         if (data.length === 0) return;
 
-                        const keys = Object.keys(data[0]); // ["review","label","confidence"]
+                        const keys = ["review","confidence","label"]
                         const csvRows = [];
 
                         // Header row
@@ -583,7 +583,7 @@
                         a.click();
                         document.body.removeChild(a);
                     });
-            });
+
             // Reset review section
             function resetReviewSection() {
                 // Clear inputs
