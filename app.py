@@ -39,7 +39,7 @@ def analyse(batch: str):
             {
                 "review": reviews[i],
                 "confidence": confidences[i],
-                "label": labels[i]
+                "label": labels[i][0]
             }
         )
     return json.dumps(result)

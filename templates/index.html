@@ -1011,7 +1011,7 @@
                 });
                 console.log("test");
                 var result = await response.json();
-
+                
                 if (result.success) {
                     showBatchStatusMessage(`Successfully analyzed ${result.total_reviews} reviews from ${uploadedFiles.length} file(s)`, 'success');
                 } else {
