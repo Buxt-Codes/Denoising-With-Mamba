@@ -38,10 +38,14 @@ class MambaDecoder(nn.Module):
             nn.Linear(d_input, d_input * mlp_ratio),
             nn.ReLU(),
             nn.Linear(d_input * mlp_ratio, num_classes),
-            nn.Sigmoid(),
         )
+
+        self.multi_classes = multi_classes
     
     def forward(self, x, context):
         x, _ = self.mamba(x, context)
         x = x.mean(dim=1)
-        return self.classifier(x)
+        if self.multi_classes:
+            return self.classifier(x)
+        else:
+            return nn.Sigmoid(self.classifier(x))

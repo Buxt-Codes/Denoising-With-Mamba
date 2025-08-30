@@ -47,8 +47,9 @@ class ReviewClassifier():
             out = self.decoder(x=texts, context=locations)
         out = out.detach().cpu()
         if self.multi_classes:
-            label = out.argmax(dim=1)
-            confidence = out.gather(1, label.unsqueeze(1)).squeeze(1)
+            probs = torch.softmax(out, dim=1)
+            label = probs.argmax(dim=1)
+            confidence = probs.gather(1, label.unsqueeze(1)).squeeze(1)
             return [self.label_map[int(l)] for l in label], [float(c) for c in confidence]
         else:
             label = (out > 0.5).long()
