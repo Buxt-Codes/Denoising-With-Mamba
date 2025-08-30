@@ -2,8 +2,15 @@
 from flask import Flask, render_template, request
 from flask import jsonify
 import json
+from model import ReviewClassifier
 
+review_classifier = ReviewClassifier(
+    model_path=r"model\review_classifier\decoder\mamba_model\multi_classification_decoder.pt", 
+    encoder_path="model/review_classifier/embedder/nomic_model", 
+    multi_classes=True
+)
 app = Flask(__name__, template_folder='templates')
+
 
 # Display your index page
 @app.route("/")
@@ -13,13 +20,15 @@ def index():
 @app.route("/model/<batch>", methods=["POST"])
 def analyse(batch: str):
     if batch == "batch":
-        data = request.get_json()
-        
+        payload = request.get_json()
+        reviews = [item["review"] for item in payload]
+        locations = [item["location"] for item in payload]
     else:
         review = request.args.get("review")
         location = request.args.get("location")
-        data = [[review]]
-    # result = model.analyse(data)
+        reviews = [review]
+        locations = [location]
+    labels, confidence = review_classifier.decode(reviews, locations)
     result = {}
     return jsonify(result)
 

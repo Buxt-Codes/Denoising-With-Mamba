@@ -1,0 +1,8 @@
+location,review,cf,label
+"macs","Not that good",0.1,1
+ "macs","that",0.645,0
+ "macs","good",0.1,1
+ "macs","Not it",0.4,0
+ "macs","Not it good",0.6,0
+ "macs","Not that",0.9,0
+ "macs","Not",0.04933643634664364,1

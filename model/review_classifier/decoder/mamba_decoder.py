@@ -12,7 +12,8 @@ class MambaDecoder(nn.Module):
         d_discr : int | None = None,
         ker_size : int = 4,
         parallel : bool = False,
-        mlp_ratio: int = 2
+        mlp_ratio: int = 2,
+        multi_classes: bool = False
     ):
         super().__init__()
         
@@ -27,11 +28,16 @@ class MambaDecoder(nn.Module):
             'parallel': parallel,
         }
 
+        if multi_classes:
+            num_classes = 4
+        else:
+            num_classes = 1
+
         self.mamba = Mamba(**mamba_par)
         self.classifier = nn.Sequential(
             nn.Linear(d_input, d_input * mlp_ratio),
             nn.ReLU(),
-            nn.Linear(d_input * mlp_ratio, 1),
+            nn.Linear(d_input * mlp_ratio, num_classes),
             nn.Sigmoid(),
         )
     
