@@ -234,6 +234,8 @@
                 margin-bottom: 4px;
             }
 
+            <section class="charts"><div class="card"><h3>Policy Violation Types</h3><div class="chart-box"><canvas id="policyChart"></canvas></div></div><div class="card"><h3>Confidence Score Distribution</h3><div class="chart-box"><canvas id="confidenceChart"></canvas></div></div><div class="card"><h3>Review Quality to Confidence</h3><div class="chart-box"><canvas id="temporalChart"></canvas></div></div></section></div><div><button id="exportBtn" class="btn">Export CSV</button></div>
+            
             .file-upload-hint {
                 color: var(--muted);
                 font-size: 0.85rem;
@@ -430,6 +432,7 @@
                     enforce policies.</p>
             </header>
 
+
             <!-- Real-time analysis -->
             <section class="panel">
                 <div class="panel-head">Real-time Review Analysis</div>
@@ -549,13 +552,44 @@
                 }
             };
 
+            document.getElementById("exportBtn").addEventListener("click", function () {
+                fetch("/export_data")
+                    .then(response => response.json())
+                    .then(data => {
+                        // Convert JSON → CSV
+                        if (data.length === 0) return;
+
+                        const keys = Object.keys(data[0]); // ["review","label","confidence"]
+                        const csvRows = [];
+
+                        // Header row
+                        csvRows.push(keys.join(","));
+
+                        // Data rows
+                        data.forEach(row => {
+                            const values = keys.map(k => `"${row[k]}"`); // wrap in quotes
+                            csvRows.push(values.join(","));
+                        });
+
+                        const csvString = csvRows.join("\n");
+                        const blob = new Blob([csvString], { type: "text/csv" });
+                        const url = window.URL.createObjectURL(blob);
+
+                        // Trigger download
+                        const a = document.createElement("a");
+                        a.setAttribute("href", url);
+                        a.setAttribute("download", "reviews_export.csv");
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    });
+            });
             // Reset review section
             function resetReviewSection() {
                 // Clear inputs
                 document.getElementById('reviewText').value = '';
                 document.getElementById('locationType').selectedIndex = 0;
                 document.getElementById('locationDescription').value = '';
-
 
                 // Hide results & violations
                 document.getElementById('resultsSection').style.display = 'none';
@@ -1043,7 +1077,7 @@
                     policyChart.destroy();
                     temporalChart.destroy();
                     confidenceChart.destroy();
-                
+
                     initCharts();
                     showBatchStatusMessage(`Successfully analyzed ${result.length} reviews`, 'success');
                 } catch (error) {
