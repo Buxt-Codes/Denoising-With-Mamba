@@ -526,6 +526,9 @@
             </div>
         </section>
     </div>
+    <div>
+    <button id="exportBtn" class="btn">Export CSV</button>
+    </div>
 
     <script>
         // Global variables
@@ -542,7 +545,39 @@
                 }
             }
         };
+        
+document.getElementById("exportBtn").addEventListener("click", function() {
+    fetch("/export_data")
+        .then(response => response.json())
+        .then(data => {
+            // Convert JSON → CSV
+            if (data.length === 0) return;
 
+            const keys = Object.keys(data[0]); // ["review","label","confidence"]
+            const csvRows = [];
+
+            // Header row
+            csvRows.push(keys.join(","));
+
+            // Data rows
+            data.forEach(row => {
+                const values = keys.map(k => `"${row[k]}"`); // wrap in quotes
+                csvRows.push(values.join(","));
+            });
+
+            const csvString = csvRows.join("\n");
+            const blob = new Blob([csvString], { type: "text/csv" });
+            const url = window.URL.createObjectURL(blob);
+
+            // Trigger download
+            const a = document.createElement("a");
+            a.setAttribute("href", url);
+            a.setAttribute("download", "reviews_export.csv");
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+});
         // Reset review section
         function resetReviewSection() {
             // Clear inputs
