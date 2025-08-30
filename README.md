@@ -55,7 +55,6 @@ We conducted additional tests in order to see the importance of our FiLM selecti
 #### **7. Conclusion**
 This review relevance classification pipeline demonstrates that Mamba can outperform cross-attention based architectures at the same task of incorporating contextual information into the input sequence. By combining efficient embedding reuse, FiLM selection functions into state space decoding and innovating data generation strategies, we managed to achieve a robust, scalable, and highly accuracy classifier. 
 
-#### **References**
 [1]: https://huggingface.co/nomic-ai/nomic-embed-text-v1.5
 [2]: https://arxiv.org/abs/2405.21060
 [3]: https://arxiv.org/abs/1709.07871
