@@ -1,5 +1,5 @@
 ### **Overview**
-The task of review classification requires models that are both highly accurate and scalable to large volumes of user-generated content. Our solution is a two-stage pipeline consisting of Nomic embedder (encoder) [1] and a modified-Mamba based decoder [2]. This architecture was designed to balance computational efficiency, accuracy and scalability.
+The task of review classification requires models that are both highly accurate and scalable to large volumes of user-generated content. Our solution is a two-stage pipeline consisting of a Nomic embedder (encoder) [1] and a modified Mamba-based decoder [2]. This architecture was designed to balance computational efficiency, accuracy and scalability.
 
 #### **1. Model Architecture**
 
