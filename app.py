@@ -30,16 +30,16 @@ def analyse(batch: str):
         location = request.args.get("location")
         reviews = [review]
         locations = [location]
-    # labels, confidences = review_classifier.classify(reviews, locations)
+    labels, confidences = review_classifier.classify(reviews, locations)
     result = []
-    labels = [1 for i in range(len(reviews))]
-    confidences = labels.copy()
+    # labels = [1 for i in range(len(reviews))]
+    # confidences = labels.copy()
     for i in range(len(reviews)):
         result.append(
             {
                 "review": reviews[i],
                 "confidence": confidences[i],
-                "label": labels[i]
+                "label": labels[i][0]
             }
         )
 
