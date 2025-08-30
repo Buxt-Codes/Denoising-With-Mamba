@@ -825,6 +825,80 @@ async function analyzeBatch() {
         btn.textContent = 'Analyze Files';
     }
 }
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        async function processFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const content = e.target.result;
+                    let reviews = [];
+                    if (file.name.endsWith('.csv')) {
+                        const lines = content.split('\n').filter(line => line.trim());
+                        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                        const reviewIndex = headers.findIndex(h => h.includes('review') || h.includes('text') || h.includes('comment'));
+                        if (reviewIndex === -1) {
+                            reject(new Error('No review column found in CSV'));
+                            return;
+                        }
+                        reviews = lines.slice(1).map(line => {
+                            const values = line.split(',');
+                            return {
+                                text: values[reviewIndex]?.replace(/"/g, '') || '',
+                                location: values[reviewIndex + 1]?.replace(/"/g, '') || ''
+                            };
+                        }).filter(review => review.text.trim());
+                    } else { }
+                    resolve(reviews);
+
+
+                };
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+        // Batch analysis
+        async function analyzeBatch() {
+            if (uploadedFiles.length === 0) {
+                showBatchStatusMessage('Please upload files first', 'error');
+                return;
+            }
+            const btn = document.getElementById('analyzeBatchBtn');
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            try {
+                let reviews = [];
+                
+                var content = await processFileContent(uploadedFiles[0]);
+                reviews.push(content);
+                console.log(JSON.stringify(reviews));
+                var response = await fetch('/api/analyze-batch', {
+                    method: 'POST',
+                    body: JSON.stringify(reviews),
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showBatchStatusMessage(`Successfully analyzed ${result.total_reviews} reviews from ${uploadedFiles.length} file(s)`, 'success');
+                } else {
+                    showBatchStatusMessage('Error: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Batch analysis error:', error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Analyze Files';
+            }
+        }
 
 // Status message functions
 function showStatusMessage(message, type) {
