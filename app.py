@@ -32,6 +32,7 @@ def analyse(batch: str):
         reviews = [review]
         locations = [location]
     labels, confidences = review_classifier.classify(reviews, locations)
+    print(labels, confidences)
     result = []
     for i in range(len(reviews)):
         result.append(
