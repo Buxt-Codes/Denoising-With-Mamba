@@ -2,164 +2,1000 @@
 <html lang="en">
 
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>ML Review Quality &amp; Relevancy Dashboard</title>
-    <link href="/static/styles/style.css" rel="stylesheet" />
-    <script defer="True" src="/static/js/script.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ML Review Quality & Relevancy Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --navy: #1E3A5F;
+            --navy-ink: #0F2744;
+            --bg: #1E3A5F;
+            --card: #F8F9FA;
+            --border: #E5E7EB;
+            --text: #0F2744;
+            --muted: #64748B;
+            --green: #16A34A;
+            --amber: #D97706;
+            --red: #DC2626;
+            --white: #ffffff;
+            --light: #F4F6F8;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            background: var(--bg);
+            color: var(--text);
+            padding: 28px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+            color: var(--white);
+        }
+
+        .title {
+            font-size: clamp(1.6rem, 2.8vw, 2.4rem);
+            font-weight: 800;
+            letter-spacing: .3px;
+            margin: 0 0 6px 0;
+        }
+
+        .subtitle {
+            color: #dbe5f2;
+            font-size: .98rem;
+            margin: 0;
+        }
+
+        /* Panel */
+        .panel {
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            margin-bottom: 22px;
+        }
+
+        .panel-head {
+            background: var(--light);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 16px;
+            font-weight: 700;
+            letter-spacing: .2px;
+            color: var(--navy-ink);
+            border-top-left-radius: 14px;
+            border-top-right-radius: 14px;
+        }
+
+        .panel-body {
+            padding: 16px;
+            color: var(--navy-ink)
+        }
+
+        .input-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px
+        }
+
+        .tab {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--white);
+            color: var(--navy-ink);
+            cursor: pointer;
+            user-select: none;
+            font-size: 0.9rem;
+        }
+
+        .tab.active {
+            background: var(--navy);
+            color: var(--white);
+            border-color: var(--navy);
+        }
+
+        .tab:hover:not(.active) {
+            background: var(--light);
+        }
+
+        .input-content {
+            display: none
+        }
+
+        .input-content.active {
+            display: block
+        }
+
+        textarea.review {
+            width: 100%;
+            min-height: 120px;
+            resize: vertical;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--white);
+            color: var(--navy-ink);
+            padding: 12px;
+            font-size: 0.98rem;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .select,
+        .text {
+            width: 100%;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--white);
+            color: var(--navy-ink);
+            padding: 10px 12px;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            background: var(--navy);
+            border: 1px solid var(--navy);
+            color: var(--white);
+            font-weight: 700;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background: #244a74;
+        }
+
+        .btn:disabled {
+            background: var(--muted);
+            border-color: var(--muted);
+            cursor: not-allowed;
+        }
+
+        /* File upload */
+        .file-upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            background: var(--white);
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .file-upload-area:hover,
+        .file-upload-area.dragover {
+            border-color: var(--navy);
+            background: var(--light);
+        }
+
+        .file-upload-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .file-upload-text {
+            color: var(--navy-ink);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .file-upload-hint {
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .uploaded-files {
+            margin-top: 16px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--white);
+            margin-bottom: 8px;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-icon {
+            font-size: 1.2rem;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: var(--navy-ink);
+        }
+
+        .file-size {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        .remove-btn {
+            background: var(--red);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .remove-btn:hover {
+            background: #b91c1c;
+        }
+
+        /* Results */
+        .results {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .result-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--white);
+            padding: 16px;
+            text-align: center;
+        }
+
+        .result-val {
+            font-size: 1.8rem;
+            font-weight: 900;
+            margin-bottom: 4px
+        }
+
+        .high {
+            color: var(--green)
+        }
+
+        .mid {
+            color: var(--amber)
+        }
+
+        .low {
+            color: var(--red)
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .violations {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 16px
+        }
+
+        .violation-tag {
+            border: 1px solid var(--red);
+            color: var(--red);
+            background: var(--white);
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: .8rem;
+        }
+
+        /* Charts row */
+        .charts {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px
+        }
+
+        .card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--card);
+        }
+
+        .card h3 {
+            margin: 12px 12px 6px;
+            font-size: 1rem;
+            color: var(--navy-ink)
+        }
+
+        .chart-box {
+            position: relative;
+            height: 260px;
+            background: var(--white);
+            border-top: 1px solid var(--border);
+            border-radius: 0 0 12px 12px;
+            padding: 8px 8px 0
+        }
+
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 0.9rem;
+        }
+
+        .status-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .status-error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .status-info {
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #dbeafe;
+        }
+
+        /* Responsive */
+        @media (max-width: 920px) {
+            .results {
+                grid-template-columns: 1fr
+            }
+
+            .charts {
+                grid-template-columns: 1fr
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .form-group {
+                min-width: auto;
+            }
+        }
+    </style>
 </head>
 
 <body>
     <div class="container">
-        <div class="header">
-            <h1>ML Review Quality &amp; Relevancy Dashboard</h1>
-            <p>Advanced machine learning system for evaluating Google location reviews</p>
-        </div>
-        <!-- Overall Statistics -->
-        <div class="stats-grid">
-            <div class="stat-item">
-                <div class="stat-value" id="totalReviews">12,847</div>
-                <div class="stat-label">Total Reviews Analyzed</div>
+        <header class="header">
+            <h1 class="title">ML Review Quality & Relevancy Dashboard</h1>
+            <p class="subtitle">Detect spam, ads, irrelevant content, and unvisited-location rants. Assess relevancy and
+                enforce policies.</p>
+        </header>
+
+        <!-- Real-time analysis -->
+        <section class="panel">
+            <div class="panel-head">Real-time Review Analysis</div>
+            <div class="panel-body">
+                <div class="input-tabs">
+                    <div class="tab active" onclick="switchInputMethod('text')">📝 Text Input</div>
+                    <div class="tab" onclick="switchInputMethod('file')">📁 File Upload</div>
+                </div>
+
+                <!-- Text Input Section -->
+                <div class="input-content active" id="textInput">
+                    <textarea class="review review-input" id="reviewText"
+                        placeholder="Enter a review to analyze..."></textarea>
+
+                    <div class="controls">
+                        <div class="form-group">
+                            <label class="form-label">Business Type</label>
+                            <select class="select" id="locationType">
+                                <option value="restaurant">Restaurant</option>
+                                <option value="hotel">Hotel</option>
+                                <option value="retail">Retail Store</option>
+                                <option value="service">Service Business</option>
+                                <option value="entertainment">Entertainment</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Location Details (Optional)</label>
+                            <input class="text" id="locationDescription" type="text"
+                                placeholder="e.g., McDonald's, 123 Main St, 9AM-10PM">
+                        </div>
+                        <button class="btn" onclick="analyzeReview()">
+                            <span id="analyzeButtonText">Analyze Review</span>
+                        </button>
+                    </div>
+
+                    <!-- Results section moved here -->
+                    <div class="results" id="resultsSection" style="display:none;">
+                        <div class="result-card">
+                            <div class="result-val" id="qualityScore">--</div>
+                            <div class="muted">Quality Score</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-val" id="relevancyScore">--</div>
+                            <div class="muted">Relevancy Score</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-val" id="spamProbability">--</div>
+                            <div class="muted">Spam Probability</div>
+                        </div>
+                    </div>
+
+                    <div class="violations" id="policyViolationsList" style="display:none;"></div>
+                    <div id="statusMessage"></div>
+                </div>
+
+                <!-- File Upload Section -->
+                <div class="input-content" id="fileInput">
+                    <div class="file-upload-area" onclick="triggerFileUpload()" ondragover="handleDragOver(event)"
+                        ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+                        <div class="file-upload-icon">📄</div>
+                        <div class="file-upload-text">Click to upload or drag and drop</div>
+                        <div class="file-upload-hint">CSV, TXT, JSON files supported</div>
+                    </div>
+
+                    <input type="file" id="fileInputElement" class="file-input" multiple accept=".csv,.txt,.json"
+                        onchange="handleFileSelect(event)">
+
+                    <div id="uploadedFiles" class="uploaded-files" style="display:none;"></div>
+
+                    <div style="margin-top: 16px;">
+                        <button class="btn" id="analyzeBatchBtn" onclick="analyzeBatch()" disabled>
+                            Analyze Files
+                        </button>
+                    </div>
+
+                    <div id="batchStatusMessage"></div>
+                </div>
             </div>
-            <div class="stat-item">
-                <div class="stat-value" id="spamDetected">1,294</div>
-                <div class="stat-label">Spam Reviews Detected</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="policyViolations">847</div>
-                <div class="stat-label">Policy Violations</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="accuracy">94.2%</div>
-                <div class="stat-label">Model Accuracy</div>
-            </div>
-        </div>
-        <!-- Dashboard Grid -->
-        <div class="dashboard-grid">
-            <!-- Quality Distribution -->
+        </section>
+
+        <!-- Charts -->
+        <section class="charts">
             <div class="card">
-                <h2 class="card-title">Review Quality Distribution</h2>
-                <div class="chart-container">
-                    <canvas id="qualityChart"></canvas>
-                </div>
-                <div class="legend">
-                    <div class="legend-item">
-                        <div class="legend-color" style="background: #2ecc71;"></div>
-                        <span>High Quality</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background: #f39c12;"></div>
-                        <span>Medium Quality</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background: #e74c3c;"></div>
-                        <span>Low Quality</span>
-                    </div>
-                </div>
+                <h3>Policy Violation Types</h3>
+                <div class="chart-box"><canvas id="policyChart"></canvas></div>
             </div>
-            <!-- Policy Violations -->
             <div class="card">
-                <h2 class="card-title">Policy Violation Types</h2>
-                <div class="chart-container">
-                    <canvas id="policyChart"></canvas>
-                </div>
+                <h3>Relevancy Score Distribution</h3>
+                <div class="chart-box"><canvas id="relevancyChart"></canvas></div>
             </div>
-            <!-- Relevancy Scores -->
             <div class="card">
-                <h2 class="card-title">Relevancy Score Distribution</h2>
-                <div class="chart-container">
-                    <canvas id="relevancyChart"></canvas>
-                </div>
+                <h3>Review Quality Trends</h3>
+                <div class="chart-box"><canvas id="temporalChart"></canvas></div>
             </div>
-            <!-- Temporal Analysis -->
-            <div class="card">
-                <h2 class="card-title">Review Quality Trends</h2>
-                <div class="chart-container">
-                    <canvas id="temporalChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <!-- Real-time Prediction Section -->
-        <div class="card real-time-section">
-            <h2 class="card-title">Real-time Review Analysis</h2>
-            <div class="input-section">
-                <div class="input-methods">
-                    <div class="input-tabs">
-                        <div class="input-tab active" onclick="switchInputMethod('text')">
-                            📝 Text Input
-                        </div>
-                        <div class="input-tab" onclick="switchInputMethod('file')">
-                            📁 File Upload
-                        </div>
-                    </div>
-                    <div class="input-content active" id="textInput">
-                        <textarea class="review-input" id="reviewText"
-                            placeholder="Enter a review to analyze... (e.g., 'Great restaurant with amazing food and friendly staff!')"></textarea>
-                    </div>
-                    <div class="input-content" id="fileInput">
-                        <div class="file-upload-area" onclick="triggerFileUpload()" ondragleave="handleDragLeave(event)"
-                            ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
-                            <div class="file-upload-icon">📁</div>
-                            <div class="file-upload-text">Drop files here or click to upload</div>
-                            <div class="file-upload-subtext">Supports CSV, TXT, JSON files with review data</div>
-                        </div>
-                        <input accept=".csv,.txt,.json" class="file-input" id="fileInputElement" multiple=""
-                            onchange="handleFileSelect(event)" type="file" />
-                        <div class="uploaded-files" id="uploadedFiles">
-                            <!-- Uploaded files will appear here -->
-                        </div>
-                        <div class="batch-analysis" id="batchAnalysis">
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="progressFill">0%</div>
-                            </div>
-                            <div id="batchResults"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="controls">
-                    <div class="control-group">
-                        <label for="locationType">Location Type</label>
-                        <select id="locationType">
-                            <option value="restaurant">Restaurant</option>
-                            <option value="hotel">Hotel</option>
-                            <option value="retail">Retail Store</option>
-                            <option value="service">Service Business</option>
-                            <option value="entertainment">Entertainment</option>
-                        </select>
-                    </div>
-                    <div class="control-group">
-                        <label for="reviewerHistory">Reviewer History</label>
-                        <select id="reviewerHistory">
-                            <option value="new">New Reviewer</option>
-                            <option value="regular">Regular Reviewer</option>
-                            <option value="verified">Verified Reviewer</option>
-                        </select>
-                    </div>
-                    <button class="analyze-btn" onclick="analyzeContent()">
-                        <span id="analyzeButtonText">Analyze Review</span>
-                    </button>
-                </div>
-            </div>
-            <div class="results-section" id="resultsSection" style="display: none;">
-                <div class="result-card">
-                    <div class="result-value" id="qualityScore">--</div>
-                    <div class="result-label">Quality Score</div>
-                </div>
-                <div class="result-card">
-                    <div class="result-value" id="relevancyScore">--</div>
-                    <div class="result-label">Relevancy Score</div>
-                </div>
-                <div class="result-card">
-                    <div class="result-value" id="spamProbability">--</div>
-                    <div class="result-label">Spam Probability</div>
-                </div>
-            </div>
-            <div class="policy-violations" id="policyViolations" style="display: none;">
-                <!-- Policy violation tags will be inserted here -->
-            </div>
-        </div>
+        </section>
     </div>
+
+    <script>
+        // Global variables
+        let uploadedFiles = [];
+        let currentInputMethod = 'text';
+
+        // Chart configuration
+        const chartConfig = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        };
+
+        // Initialize charts
+        function initCharts() {
+            // Policy violations chart
+            const policyCtx = document.getElementById('policyChart').getContext('2d');
+            new Chart(policyCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Spam', 'Ads', 'Irrelevant', 'Rants', 'Fake'],
+                    datasets: [{
+                        data: [324, 189, 156, 98, 80],
+                        backgroundColor: ['#1e3c72', '#2a5298', '#4a6fa5', '#6b8dd6', '#8bb0ff'],
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    ...chartConfig,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Relevancy distribution chart
+            const relevancyCtx = document.getElementById('relevancyChart').getContext('2d');
+            new Chart(relevancyCtx, {
+                type: 'line',
+                data: {
+                    labels: ['0-20%', '21-40%', '41-60%', '61-80%', '81-100%'],
+                    datasets: [{
+                        label: 'Number of Reviews',
+                        data: [234, 567, 1890, 4320, 5836],
+                        borderColor: '#2a5298',
+                        backgroundColor: 'rgba(42, 82, 152, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#2a5298',
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    ...chartConfig,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Temporal trends chart
+            const temporalCtx = document.getElementById('temporalChart').getContext('2d');
+            new Chart(temporalCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [
+                        {
+                            label: 'High Quality',
+                            data: [920, 1150, 1080, 1200, 1340, 1420],
+                            borderColor: '#2ecc71',
+                            tension: 0.4,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Spam Detected',
+                            data: [45, 62, 38, 71, 89, 95],
+                            borderColor: '#e74c3c',
+                            tension: 0.4,
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    ...chartConfig,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Input method switching
+        function switchInputMethod(method) {
+            currentInputMethod = method;
+
+            // Update tab states
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update content visibility
+            document.querySelectorAll('.input-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            if (method === 'text') {
+                document.getElementById('textInput').classList.add('active');
+            } else {
+                document.getElementById('fileInput').classList.add('active');
+            }
+        }
+
+        // Text input analysis
+        function analyzeReview() {
+            const reviewText = document.getElementById('reviewText').value.trim();
+            const locationType = document.getElementById('locationType').value;
+            const locationDescription = document.getElementById('locationDescription').value.trim();
+
+            if (!reviewText) {
+                showStatusMessage('Please enter a review to analyze.', 'error');
+                return;
+            }
+
+            // Show loading state
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.style.display = 'grid';
+            document.getElementById('qualityScore').textContent = '...';
+            document.getElementById('relevancyScore').textContent = '...';
+            document.getElementById('spamProbability').textContent = '...';
+
+            // Prepare data for backend
+            const reviewData = {
+                text: reviewText,
+                location_type: locationType,
+                location_description: locationDescription || null
+            };
+
+            // Send to Flask backend
+            fetch('/api/analyze-review', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(reviewData)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displaySingleResult(data.result);
+                        showStatusMessage('Analysis completed successfully!', 'success');
+                    } else {
+                        showStatusMessage('Error: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Network error:', error);
+                    // Simulate results for demo
+                    simulateAnalysisResult();
+                    showStatusMessage('Using demo data (backend not connected)', 'info');
+                });
+        }
+
+        // Display single result
+        function displaySingleResult(result) {
+            document.getElementById('qualityScore').textContent = result.quality_score;
+            document.getElementById('relevancyScore').textContent = result.relevancy_score;
+            document.getElementById('spamProbability').textContent = result.spam_probability + '%';
+
+            // Apply styling based on scores
+            const qualityEl = document.getElementById('qualityScore');
+            const relevancyEl = document.getElementById('relevancyScore');
+            const spamEl = document.getElementById('spamProbability');
+
+            qualityEl.className = 'result-val ' + getScoreClass(result.quality_score);
+            relevancyEl.className = 'result-val ' + getScoreClass(result.relevancy_score);
+            spamEl.className = 'result-val ' + (result.spam_probability > 50 ? 'low' : 'high');
+
+            // Show violations if any
+            if (result.violations && result.violations.length > 0) {
+                displayViolations(result.violations);
+            } else {
+                document.getElementById('policyViolationsList').style.display = 'none';
+            }
+        }
+
+        // Simulate analysis result for demo
+        function simulateAnalysisResult() {
+            const reviewText = document.getElementById('reviewText').value.toLowerCase();
+            let quality, relevancy, spam, violations = [];
+
+            if (reviewText.includes('great') || reviewText.includes('excellent') || reviewText.includes('amazing')) {
+                quality = 85 + Math.floor(Math.random() * 10);
+                relevancy = 90 + Math.floor(Math.random() * 8);
+                spam = Math.floor(Math.random() * 15);
+            } else if (reviewText.includes('deal') || reviewText.includes('discount') || reviewText.includes('call')) {
+                quality = 15 + Math.floor(Math.random() * 20);
+                relevancy = 20 + Math.floor(Math.random() * 25);
+                spam = 70 + Math.floor(Math.random() * 25);
+                violations = ['Advertisement', 'Promotional Content'];
+            } else if (reviewText.includes('terrible') || reviewText.includes('hate') || reviewText.includes('government')) {
+                quality = 25 + Math.floor(Math.random() * 20);
+                relevancy = 40 + Math.floor(Math.random() * 20);
+                spam = 50 + Math.floor(Math.random() * 30);
+                violations = ['Rant', 'Irrelevant Content'];
+            } else {
+                quality = 60 + Math.floor(Math.random() * 25);
+                relevancy = 70 + Math.floor(Math.random() * 25);
+                spam = Math.floor(Math.random() * 30);
+            }
+
+            displaySingleResult({
+                quality_score: quality,
+                relevancy_score: relevancy,
+                spam_probability: spam,
+                violations: violations
+            });
+        }
+
+        // Get score class for styling
+        function getScoreClass(score) {
+            if (score >= 70) return 'high';
+            if (score >= 40) return 'mid';
+            return 'low';
+        }
+
+        // Display violations
+        function displayViolations(violations) {
+            const violationsList = document.getElementById('policyViolationsList');
+            if (violations.length > 0) {
+                violationsList.innerHTML = violations.map(v =>
+                    `<span class="violation-tag">${v}</span>`
+                ).join('');
+                violationsList.style.display = 'flex';
+            } else {
+                violationsList.style.display = 'none';
+            }
+        }
+
+        // File upload functions
+        function triggerFileUpload() {
+            document.getElementById('fileInputElement').click();
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.target.closest('.file-upload-area').classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.target.closest('.file-upload-area').classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const uploadArea = e.target.closest('.file-upload-area');
+            uploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            processFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            processFiles(files);
+        }
+
+        function processFiles(files) {
+            const validExtensions = ['.csv', '.txt', '.json'];
+            const validFiles = files.filter(file => {
+                const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+                return validExtensions.includes(extension);
+            });
+
+            if (validFiles.length === 0) {
+                showBatchStatusMessage('Please select valid files (.csv, .txt, .json)', 'error');
+                return;
+            }
+
+            // Add files to uploaded files list
+            validFiles.forEach(file => {
+                if (!uploadedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                    uploadedFiles.push(file);
+                }
+            });
+
+            displayUploadedFiles();
+            document.getElementById('analyzeBatchBtn').disabled = uploadedFiles.length === 0;
+        }
+
+        function displayUploadedFiles() {
+            const container = document.getElementById('uploadedFiles');
+            if (uploadedFiles.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+            container.innerHTML = uploadedFiles.map((file, index) => `
+        <div class="file-item">
+            <div class="file-info">
+                <div class="file-icon">${getFileIcon(file.name)}</div>
+                <div>
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-size">${formatFileSize(file.size)}</div>
+                </div>
+            </div>
+            <button class="remove-btn" onclick="removeFile(${index})">Remove</button>
+        </div>
+    `).join('');
+        }
+
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            displayUploadedFiles();
+            document.getElementById('analyzeBatchBtn').disabled = uploadedFiles.length === 0;
+        }
+
+        function getFileIcon(filename) {
+            const extension = filename.toLowerCase().substring(filename.lastIndexOf('.'));
+            switch (extension) {
+                case '.csv': return '📊';
+                case '.txt': return '📄';
+                case '.json': return '📋';
+                default: return '📁';
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        async function processFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const content = e.target.result;
+                    let reviews = [];
+                    if (file.name.endsWith('.csv')) {
+                        const lines = content.split('\n').filter(line => line.trim());
+                        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                        const reviewIndex = headers.findIndex(h => h.includes('review') || h.includes('text') || h.includes('comment'));
+                        if (reviewIndex === -1) {
+                            reject(new Error('No review column found in CSV'));
+                            return;
+                        }
+                        reviews = lines.slice(1).map(line => {
+                            const values = line.split(',');
+                            return {
+                                text: values[reviewIndex]?.replace(/"/g, '') || '',
+                                location: values[reviewIndex + 1]?.replace(/"/g, '') || ''
+                            };
+                        }).filter(review => review.text.trim());
+                    } else { }
+                    resolve(reviews);
+
+
+                };
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+        // Batch analysis
+        async function analyzeBatch() {
+            if (uploadedFiles.length === 0) {
+                showBatchStatusMessage('Please upload files first', 'error');
+                return;
+            }
+            const btn = document.getElementById('analyzeBatchBtn');
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            try {
+                let reviews = [];
+                
+                var content = await processFileContent(uploadedFiles[0]);
+                reviews.push(content);
+                console.log(processFileContent(content))
+                console.log(JSON.stringify(reviews));
+                var response = await fetch('/api/analyze-batch', {
+                    method: 'POST',
+                    body: JSON.stringify(reviews),
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showBatchStatusMessage(`Successfully analyzed ${result.total_reviews} reviews from ${uploadedFiles.length} file(s)`, 'success');
+                } else {
+                    showBatchStatusMessage('Error: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Batch analysis error:', error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Analyze Files';
+            }
+        }
+
+        // Status message functions
+        function showStatusMessage(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        function showBatchStatusMessage(message, type) {
+            const statusDiv = document.getElementById('batchStatusMessage');
+            statusDiv.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // Placeholder rotation for textarea
+        function initPlaceholderRotation() {
+            const textarea = document.getElementById('reviewText');
+            const hints = [
+                "Try: 'Great restaurant with amazing food and friendly staff!'",
+                "Try: 'BEST DEALS! Visit our website for discounts!'",
+                "Try: 'This place is terrible, I hate everything!'",
+                "Try: 'Nice hotel, clean rooms and good service'"
+            ];
+            let hintIndex = 0;
+
+            setInterval(() => {
+                if (textarea.value === '') {
+                    textarea.placeholder = hints[hintIndex];
+                    hintIndex = (hintIndex + 1) % hints.length;
+                }
+            }, 4000);
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function () {
+            initCharts();
+            initPlaceholderRotation();
+        });
+    </script>
 </body>
 
 </html>

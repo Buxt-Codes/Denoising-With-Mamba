@@ -184,97 +184,95 @@ function analyzeReview() {
             },
         })
         req.then(function (response) {
-            results = JSON.parse(response.json());
-            displayBatchResults(results);
+            
             if (res.ok) {
-                // status code was 200-299
-            } else {
-                // status was something else
-            }
+                results = JSON.parse(response.json());
+                displayBatchResults(results);
+            } 
         }, function (error) {
             console.error('failed due to network error or cross domain')
         })
     }, 1500);
 }
-function simulateMLAnalysis(text, locationType, reviewerHistory) {
-    const spamKeywords = ['best deals', 'call now', 'huge discounts', 'visit our store', 'click here'];
-    const adKeywords = ['buy now', 'sale', 'discount', 'offer', 'promotion', 'website', 'phone number'];
-    const rantKeywords = ['hate', 'terrible', 'worst', 'government', 'conspiracy'];
-    const qualityKeywords = ['great', 'excellent', 'amazing', 'delicious', 'wonderful', 'perfect', 'love'];
-    const relevantKeywords = {
-        restaurant: ['food', 'meal', 'service', 'waiter', 'menu', 'taste', 'delicious'],
-        hotel: ['room', 'bed', 'service', 'clean', 'comfortable', 'staff'],
-        retail: ['product', 'price', 'quality', 'staff', 'service', 'selection'],
-        service: ['service', 'staff', 'professional', 'helpful', 'quality'],
-        entertainment: ['fun', 'entertainment', 'show', 'experience', 'enjoyable']
-    };
-    let qualityScore = 50;
-    let relevancyScore = 50;
-    let spamProbability = 10;
-    let violations = [];
-    const lowerText = text.toLowerCase();
-    spamKeywords.forEach(keyword => {
-        if (lowerText.includes(keyword)) {
-            spamProbability += 25;
-            qualityScore -= 20;
-        }
-    });
-    adKeywords.forEach(keyword => {
-        if (lowerText.includes(keyword)) {
-            violations.push('Advertisement');
-            qualityScore -= 15;
-            relevancyScore -= 10;
-        }
-    });
-    rantKeywords.forEach(keyword => {
-        if (lowerText.includes(keyword)) {
-            violations.push('Rant');
-            qualityScore -= 10;
-        }
-    });
-    qualityKeywords.forEach(keyword => {
-        if (lowerText.includes(keyword)) {
-            qualityScore += 10;
-            relevancyScore += 5;
-        }
-    });
-    const relevantWords = relevantKeywords[locationType] || [];
-    let relevantWordCount = 0;
-    relevantWords.forEach(keyword => {
-        if (lowerText.includes(keyword)) {
-            relevantWordCount++;
-            relevancyScore += 8;
-        }
-    });
-    if (relevantWordCount === 0) {
-        violations.push('Irrelevant Content');
-        relevancyScore -= 20;
-    }
-    if (reviewerHistory === 'verified') {
-        qualityScore += 5;
-        spamProbability -= 10;
-    } else if (reviewerHistory === 'new') {
-        spamProbability += 10;
-    }
-    if (text.length < 10) {
-        violations.push('Insufficient Content');
-        qualityScore -= 20;
-    }
-    if (/(.)\1{4,}/.test(text)) {
-        violations.push('Spam Pattern');
-        spamProbability += 30;
-    }
-    qualityScore = Math.max(0, Math.min(100, qualityScore));
-    relevancyScore = Math.max(0, Math.min(100, relevancyScore));
-    spamProbability = Math.max(0, Math.min(100, spamProbability));
-    violations = [...new Set(violations)];
-    return {
-        quality: qualityScore,
-        relevancy: relevancyScore,
-        spam: spamProbability,
-        violations: violations
-    };
-}
+// function simulateMLAnalysis(text, locationType, reviewerHistory) {
+//     const spamKeywords = ['best deals', 'call now', 'huge discounts', 'visit our store', 'click here'];
+//     const adKeywords = ['buy now', 'sale', 'discount', 'offer', 'promotion', 'website', 'phone number'];
+//     const rantKeywords = ['hate', 'terrible', 'worst', 'government', 'conspiracy'];
+//     const qualityKeywords = ['great', 'excellent', 'amazing', 'delicious', 'wonderful', 'perfect', 'love'];
+//     const relevantKeywords = {
+//         restaurant: ['food', 'meal', 'service', 'waiter', 'menu', 'taste', 'delicious'],
+//         hotel: ['room', 'bed', 'service', 'clean', 'comfortable', 'staff'],
+//         retail: ['product', 'price', 'quality', 'staff', 'service', 'selection'],
+//         service: ['service', 'staff', 'professional', 'helpful', 'quality'],
+//         entertainment: ['fun', 'entertainment', 'show', 'experience', 'enjoyable']
+//     };
+//     let qualityScore = 50;
+//     let relevancyScore = 50;
+//     let spamProbability = 10;
+//     let violations = [];
+//     const lowerText = text.toLowerCase();
+//     spamKeywords.forEach(keyword => {
+//         if (lowerText.includes(keyword)) {
+//             spamProbability += 25;
+//             qualityScore -= 20;
+//         }
+//     });
+//     adKeywords.forEach(keyword => {
+//         if (lowerText.includes(keyword)) {
+//             violations.push('Advertisement');
+//             qualityScore -= 15;
+//             relevancyScore -= 10;
+//         }
+//     });
+//     rantKeywords.forEach(keyword => {
+//         if (lowerText.includes(keyword)) {
+//             violations.push('Rant');
+//             qualityScore -= 10;
+//         }
+//     });
+//     qualityKeywords.forEach(keyword => {
+//         if (lowerText.includes(keyword)) {
+//             qualityScore += 10;
+//             relevancyScore += 5;
+//         }
+//     });
+//     const relevantWords = relevantKeywords[locationType] || [];
+//     let relevantWordCount = 0;
+//     relevantWords.forEach(keyword => {
+//         if (lowerText.includes(keyword)) {
+//             relevantWordCount++;
+//             relevancyScore += 8;
+//         }
+//     });
+//     if (relevantWordCount === 0) {
+//         violations.push('Irrelevant Content');
+//         relevancyScore -= 20;
+//     }
+//     if (reviewerHistory === 'verified') {
+//         qualityScore += 5;
+//         spamProbability -= 10;
+//     } else if (reviewerHistory === 'new') {
+//         spamProbability += 10;
+//     }
+//     if (text.length < 10) {
+//         violations.push('Insufficient Content');
+//         qualityScore -= 20;
+//     }
+//     if (/(.)\1{4,}/.test(text)) {
+//         violations.push('Spam Pattern');
+//         spamProbability += 30;
+//     }
+//     qualityScore = Math.max(0, Math.min(100, qualityScore));
+//     relevancyScore = Math.max(0, Math.min(100, relevancyScore));
+//     spamProbability = Math.max(0, Math.min(100, spamProbability));
+//     violations = [...new Set(violations)];
+//     return {
+//         quality: qualityScore,
+//         relevancy: relevancyScore,
+//         spam: spamProbability,
+//         violations: violations
+//     };
+// }
 function displayResults(result) {
     const qualityElement = document.getElementById('qualityScore');
     const relevancyElement = document.getElementById('relevancyScore');
@@ -539,10 +537,10 @@ async function analyzeBatch() {
     }); // returns a promise
 
     req.then(function (response) {
-        results = JSON.parse(response.json());
-        displayBatchResults(results);
+        
         if (res.ok) {
-            // status code was 200-299
+            results = JSON.parse(response.json());
+            displayBatchResults(results);
         } else {
             // status was something else
         }
@@ -555,9 +553,8 @@ function displayBatchResults(results) {
     const batchResults = document.getElementById('batchResults');
     const summary = {
         total: results.length,
-        highQuality: results.filter(r => r.quality >= 70).length,
-        spam: results.filter(r => r.spam >= 50).length,
-        violations: results.filter(r => r.violations.length > 0).length
+        highQuality: results.filter(r => r.cf >= 0.7).length,
+        spam: results.filter(r => r.label == 1).length
     };
     batchResults.innerHTML = `
                 <div style="margin-top: 20px; padding: 20px; background: rgba(255, 255, 255, 0.1); border-radius: 10px;">
@@ -575,10 +572,6 @@ function displayBatchResults(results) {
                             <div style="font-size: 1.5rem; font-weight: bold; color: #e74c3c;">${summary.spam}</div>
                             <div style="font-size: 0.8rem; opacity: 0.8;">Potential Spam</div>
                         </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #f39c12;">${summary.violations}</div>
-                            <div style="font-size: 0.8rem; opacity: 0.8;">Policy Violations</div>
-                        </div>
                     </div>
                     <div style="max-height: 300px; overflow-y: auto;">
                         ${results.slice(0, 20).map(result => `
@@ -587,7 +580,6 @@ function displayBatchResults(results) {
                                 <div style="display: flex; gap: 15px;">
                                     <span>Quality: <strong style="color: ${getQualityColor(result.quality)}">${result.quality}%</strong></span>
                                     <span>Spam: <strong style="color: ${getSpamColor(result.spam)}">${result.spam}%</strong></span>
-                                    ${result.violations.length > 0 ? `<span style="color: #f39c12;">⚠️ Violations</span>` : ''}
                                 </div>
                             </div>
                         `).join('')}
@@ -597,13 +589,12 @@ function displayBatchResults(results) {
             `;
 }
 function getQualityColor(score) {
-    if (score >= 70) return '#2ecc71';
-    if (score >= 40) return '#f39c12';
+    if (score >= 0.70) return '#2ecc71';
+    if (score >= 0.4) return '#f39c12';
     return '#e74c3c';
 }
 function getSpamColor(score) {
-    if (score >= 50) return '#e74c3c';
-    if (score >= 20) return '#f39c12';
+    if (score == 0) return '#e74c3c';
     return '#2ecc71';
 }
 function analyzeContent() {
