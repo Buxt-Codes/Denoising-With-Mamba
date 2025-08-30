@@ -178,7 +178,10 @@ function analyzeReview() {
     setTimeout(() => {
         var req = fetch('/model/single', {
             method: 'post',
-            body: fd
+            body: JSON.stringify({ "text": reviewText, "location": locationType }),
+            headers: {
+                "Content-Type": "application/json",
+            },
         })
         req.then(function (response) {
             results = JSON.parse(response.json());
@@ -495,7 +498,7 @@ async function processFileContent(file) {
                         const values = line.split(',');
                         return {
                             text: values[reviewIndex]?.replace(/"/g, '') || '',
-                            filename: file.name
+                            location: values[reviewIndex + 1]?.replace(/"/g, '') || ''
                         };
                     }).filter(review => review.text.trim());
                 } else if (file.name.endsWith('.txt')) {
@@ -504,6 +507,7 @@ async function processFileContent(file) {
                         .map(text => ({ text: text.trim(), filename: file.name }));
                 }
                 resolve(reviews);
+
             } catch (error) {
                 reject(error);
             }
@@ -521,7 +525,6 @@ async function analyzeBatch() {
     var reviews;
     try {
         reviews = await processFileContent(uploadedFiles[0]);
-        // allReviews = allReviews.concat(reviews);
     } catch (error) {
         console.error(`Error processing ${file.name}:`, error);
     }
@@ -529,7 +532,10 @@ async function analyzeBatch() {
 
     var req = fetch('/model/batch', {
         method: 'post',
-        body: reviews
+        body: JSON.stringify(reviews),
+        headers: {
+            "Content-Type": "application/json",
+        },
     }); // returns a promise
 
     req.then(function (response) {

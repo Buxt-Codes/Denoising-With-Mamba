@@ -13,8 +13,7 @@ def index():
 @app.route("/model/<batch>", methods=["POST"])
 def analyse(batch: str):
     if batch == "batch":
-        data = request
-        print(data.get_json())
+        data = request.get_json()
         
     else:
         review = request.args.get("review")
