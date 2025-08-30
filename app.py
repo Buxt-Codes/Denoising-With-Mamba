@@ -4,8 +4,9 @@ from flask import jsonify
 import json
 from model import ReviewClassifier
 
-review_classifier = ReviewClassifier(model_path="model/review_classifier/decoder/mamba_model/binary_classification_decoder.pt",
-                                      encoder_path="model/review_classifier/embedder/nomic_model")
+review_classifier = ReviewClassifier(model_path="model/review_classifier/decoder/mamba_model/multi_classification_decoder.pt",
+                                      encoder_path="model/review_classifier/embedder/nomic_model",
+                                      multi_classes=True)
 app = Flask(__name__, template_folder='templates')
 
 
