@@ -4,20 +4,13 @@ from flask import jsonify
 import json
 from model import ReviewClassifier
 
-review_classifier = ReviewClassifier(model_path="model/review_classifier/decoder/mamba_model/multi_classification_decoder.pt",
-                                      encoder_path="model/review_classifier/embedder/nomic_model",
-                                      multi_classes=True)
+review_classifier = ReviewClassifier(model_path="model/review_classifier/decoder/mamba_model/mamba_decoder.pt",
+                                      encoder_path="model/review_classifier/embedder/nomic_model")
 app = Flask(__name__, template_folder='templates')
-
-
-# Display your index page
-
 
 @app.route("/")
 def index():
     return render_template("/index.html")
-# A function to add two numbers
-
 
 @app.route("/api/<batch>", methods=["POST"])
 def analyse(batch: str):
@@ -32,7 +25,7 @@ def analyse(batch: str):
         reviews = [review]
         locations = [location]
     labels, confidences = review_classifier.classify(reviews, locations)
-    print(labels, confidences)
+
     result = []
     for i in range(len(reviews)):
         result.append(

@@ -1,51 +1,65 @@
 import torch.nn as nn
-from .mamba import Mamba
+from torch import Tensor
 
-class MambaDecoder(nn.Module):
+from .mamba import MambaFiLM, MambaFiLMConfig
+
+class MambaFiLMDecoder(nn.Module):
     def __init__(
         self,
-        num_layers : int,
-        d_input : int,
-        d_model : int,
-        d_context : int,
-        d_state : int = 16,
-        d_discr : int | None = None,
-        ker_size : int = 4,
-        parallel : bool = False,
-        mlp_ratio: int = 2,
-        multi_classes: bool = False
+        d_input : int = 768,
+        d_context : int = 768,
+        d_model : int = 256,
+        num_layers : int = 4,
+        parallel : bool = True,
+        mlp_ratio: int = 2
     ):
+        """
+        Initializes the Mamba FiLM decoder.
+
+        Args:
+            d_input (int): The input feature dimension.
+            d_context (int): The context feature dimension.
+            d_model (int): The model feature dimension.
+            num_layers (int): The number of mamba layers.
+            parallel (bool, optional): Whether to use parallel scan. Defaults to True.
+            mlp_ratio (int, optional): The ratio of the hidden dimension in the output MLP. Defaults to 2.
+        """
         super().__init__()
         
         mamba_par = {
-            'num_layers' : num_layers,
-            'd_input' : d_input,
-            'd_context': d_context,
+            'n_layers' : num_layers,
             'd_model' : d_model,
-            'd_state' : d_state,
-            'd_discr' : d_discr,
-            'ker_size': ker_size,
-            'parallel': parallel,
+            'pscan': parallel,
         }
 
-        if multi_classes:
-            num_classes = 4
-        else:
-            num_classes = 1
+        config = MambaFiLMConfig(**mamba_par)
 
-        self.mamba = Mamba(**mamba_par)
+        self.mamba = MambaFiLM(config)
+
+        self.input_proj = nn.Linear(d_input, d_model)
+        self.context_proj = nn.Linear(d_context, d_model)
+
+
         self.classifier = nn.Sequential(
-            nn.Linear(d_input, d_input * mlp_ratio),
+            nn.Linear(d_model, d_model * mlp_ratio),
             nn.ReLU(),
-            nn.Linear(d_input * mlp_ratio, num_classes),
+            nn.Linear(d_model * mlp_ratio, 4),
         )
-
-        self.multi_classes = multi_classes
     
-    def forward(self, x, context):
-        x, _ = self.mamba(x, context)
+    def forward(self, x: Tensor, context: Tensor) -> Tensor:
+        """
+        Forward pass of the Mamba FiLM decoder.
+
+        Args:
+            x (torch.Tensor): The input sequence.
+            context (torch.Tensor): The context vector.
+
+        Returns:
+            torch.Tensor: The class logits.
+        """
+        x = self.input_proj(x)
+        context = self.context_proj(context)
+
+        x = self.mamba(x, context)
         x = x.mean(dim=1)
-        if self.multi_classes:
-            return self.classifier(x)
-        else:
-            return nn.Sigmoid(self.classifier(x))
+        return self.classifier(x)

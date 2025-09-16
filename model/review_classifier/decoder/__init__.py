@@ -1,3 +1,3 @@
-from .mamba_decoder import MambaDecoder
+from .mamba_decoder import MambaFiLMDecoder
 
-__all__ = ["MambaDecoder"]
+__all__ = ["MambaFiLMDecoder"]

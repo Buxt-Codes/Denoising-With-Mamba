@@ -1,3 +1,3 @@
-from .mamba import Mamba
+from .mamba import MambaFiLM, MambaFiLMConfig
 
-__all__ = ['Mamba']
+__all__ = ["MambaFiLM", "MambaFiLMConfig"]

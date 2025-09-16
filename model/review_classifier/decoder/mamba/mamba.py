@@ -1,299 +1,332 @@
+'''
+    Implementation of the Mamba model in PyTorch.
+    This version was ported almost as-is from the codes in:
+    - https://github.com/alxndrTL/mamba.py/blob/main/mambapy/mamba.py
+    to which all the credit goes.
+
+    The only differences stems in the implementation of the Feature-wise Linear Modulation
+    (FiLM) feature which was not present before.
+'''
+
+import math
+from dataclasses import dataclass
+from typing import Union
+
 import torch
 import torch.nn as nn
-from torch import Tensor
-from einops import einsum
-from einops import rearrange
+import torch.nn.functional as F
 
-from typing import Tuple
-from torch.nn.functional import silu
-from torch.nn.functional import softplus
-import math
-
-from .utils import default
-from .utils import RMSNorm
-from .utils import Cache
 from .pscan import pscan
 
-class Mamba(nn.Module):
-    '''
-    Class representing the Mamba model as introduced in Gu & Dao (2023)
-    (see paper: https://arxiv.org/abs/2312.00752). It is a State Space
-    Model with context-dependent capability that matches the performances
-    of the strongest Transformer competitor (albeit only tested for small
-    scales) while being much more compute efficient.
-    '''
-    
-    def __init__(
-        self,
-        num_layers : int,
-        d_input : int,
-        d_context: int,
-        d_model : int,
-        d_state : int = 16,
-        d_discr : int | None = None,
-        ker_size : int = 4,
-        parallel : bool = False,
-    ) -> None:
+@dataclass
+class MambaFiLMConfig:
+    d_model: int 
+    n_layers: int
+    dt_rank: Union[int, str] = 'auto'
+    d_state: int = 16 
+    expand_factor: int = 2 
+    d_conv: int = 4
+
+    dt_min: float = 0.001
+    dt_max: float = 0.1
+    dt_init: str = "random" 
+    dt_scale: float = 1.0
+    dt_init_floor = 1e-4
+
+    rms_norm_eps: float = 1e-5
+    base_std: float = 0.02
+
+    bias: bool = False
+    conv_bias: bool = True
+    inner_layernorms: bool = False 
+
+    mup: bool = False
+    mup_base_width: float = 128 
+
+    pscan: bool = True 
+    use_cuda: bool = False 
+
+    def __post_init__(self):
+        self.d_inner = self.expand_factor * self.d_model 
+
+        if self.dt_rank == 'auto':
+            self.dt_rank = math.ceil(self.d_model / 16)
+
+        if self.mup:
+            self.mup_width_mult = self.d_model / self.mup_base_width
+
+class MambaFiLM(nn.Module):
+    def __init__(self, config: MambaFiLMConfig):
         super().__init__()
-        
-        mamba_par = {
-            'd_input' : d_input,
-            'd_context': d_context,
-            'd_model' : d_model,
-            'd_state' : d_state,
-            'd_discr' : d_discr,
-            'ker_size': ker_size,
-            'parallel': parallel,
-        }
 
-        self.parallel = parallel
-        
-        # A Mamba model is composed of a series of MambaBlocks interleaved
-        # with normalization layers (e.g. RMSNorm)
-        self.layers = nn.ModuleList([
-            nn.ModuleList(
-                [
-                    MambaBlock(**mamba_par),
-                    RMSNorm(d_input)
-                ]
-            )
-            for _ in range(num_layers)
-        ])
-        
-    def forward(self, seq : Tensor, context : Tensor, cache : Cache = None) -> Tuple[Tensor, Cache]:
-        '''
-        Forward pass of the Mamba model.
-        
-        Args:
-            seq (Tensor): Input sequence of shape (batch_size, seq_len, d_seq).
-            
-        Returns:
-            Tensor: Output sequence of shape (batch_size, seq_len, d_seq).
-        '''
-        
-        b, l, d = seq.shape
-        pad_len = 0
-        if self.parallel:
-            next_pow2 = 2 ** math.ceil(math.log2(seq.shape[1]))
-            pad_len = next_pow2 - seq.shape[1]
-            if pad_len > 0:
-                seq = torch.cat([seq, torch.zeros(b, pad_len, d, device=seq.device)], dim=1)
+        self.config = config
 
-        for mamba, norm in self.layers: # type: ignore
-            # Apply the MambaBlock and normalize the
-            # output plus the residual connection
-            out, cache = mamba(norm(seq), context, cache)
-            seq = out + seq
-            
-        if pad_len > 0:
-            seq = seq[:, :l, :]
+        self.layers = nn.ModuleList([ResidualBlock(config) for _ in range(config.n_layers)])
 
-        return seq, cache
-        
-class MambaBlock(nn.Module):
-    '''
-    Class representing the MambaBlock as introduced in Gu & Dao (2023).
-    '''
-    
-    def __init__(
-        self, 
-        d_input : int,
-        d_model : int,
-        d_context : int,
-        d_state : int = 16,
-        d_discr : int | None = None,
-        ker_size : int = 4,
-        parallel : bool = False,
-    ) -> None:
-        '''Initialize the Mamba model.
+    def forward(self, x, c):
+        for layer in self.layers:
+            x = layer(x, c)
 
-        Args:
-            d_input (int): The dimension of the input sequence.
-            d_model (int): The dimension of the model state space.
-            c_input (int): The dimension of the input context.
-            d_state (int, optional): The dimension of the state space in the SSM stage. Defaults to 16.
-            d_discr (int | None, optional): The dimension of the discrete space in the SSM stage. Defaults to None.
-            ker_size (int, optional): The kernel size for the convolutional layer. Defaults to 4.
-            parallel (bool, optional): Whether to use parallel scan for the SSM stage. Defaults to False.
-        '''
+        return x
+
+class ResidualBlock(nn.Module):
+    def __init__(self, config: MambaFiLMConfig):
         super().__init__()
-        
-        d_discr = default(d_discr, d_model // 16)
-        
-        # Projection matrices from the input sequence space to the
-        # model state space (of dimension d_model) and back.
-        # NOTE: The in_proj matrix has a factor of 2 because it is
-        #       used to split the input sequence into two branches
-        self.in_proj  = nn.Linear(d_input, 2 * d_model, bias=False)
-        self.out_proj = nn.Linear(d_model, d_input, bias=False)
-        
-        # Projection matrices for endowing the context stage with
-        # context-dependent capability (i.e. input dependence)
-        self.context_B = nn.Linear(d_context, 2 * d_state)
-        self.context_C = nn.Linear(d_context, 2 * d_state)
 
-        # Projection matrices for endowing the SSM stage with
-        # context-dependent capability (i.e. input dependence)
-        self.s_B = nn.Linear(d_model, d_state, bias=False)
-        self.s_C = nn.Linear(d_model, d_state, bias=False)
-        self.s_D = nn.Sequential(
-            nn.Linear(d_model, d_discr, bias=False), # Fixing matrix rank to d_disc
-            nn.Linear(d_discr, d_model, bias=False),
-        )
+        self.mixer = MambaBlockFiLM(config)
+        self.norm = RMSNorm(config.d_model, config.rms_norm_eps, config.mup)
+
+    def forward(self, x, c):
+        output = self.mixer(self.norm(x), c) + x
+        return output
+
+class MambaBlockFiLM(nn.Module):
+    def __init__(self, config: MambaFiLMConfig):
+        super().__init__()
+
+        self.config = config
+
+        self.in_proj = nn.Linear(config.d_model, 2 * config.d_inner, bias=config.bias)
+
+
+        # ===== MODULATION PROJECTION LAYER INITIALISATION ===== #
+        self.context_B = nn.Linear(config.d_model, 2 * config.d_state)
+        self.context_C = nn.Linear(config.d_model, 2 * config.d_state)
+        # ====================================================== #
+
+
+        self.conv1d = nn.Conv1d(in_channels=config.d_inner, out_channels=config.d_inner, 
+                              kernel_size=config.d_conv, bias=config.conv_bias, 
+                              groups=config.d_inner,
+                              padding=config.d_conv - 1)
         
-        self.conv = nn.Conv1d(
-            in_channels=d_model,
-            out_channels=d_model,
-            kernel_size=ker_size,
-            padding=ker_size - 1,
-            groups=d_model,
-            bias=True,
-        )
+        self.x_proj = nn.Linear(config.d_inner, config.dt_rank + 2 * config.d_state, bias=False)
+
+        self.dt_proj = nn.Linear(config.dt_rank, config.d_inner, bias=True)
+
+        dt_init_std = config.dt_rank**-0.5 * config.dt_scale
+        if config.dt_init == "constant":
+            nn.init.constant_(self.dt_proj.weight, dt_init_std)
+        elif config.dt_init == "random":
+            nn.init.uniform_(self.dt_proj.weight, -dt_init_std, dt_init_std)
+        else:
+            raise NotImplementedError
         
-        # Parameters for the SSM. Follows the S4 initialization
-        self.A = nn.Parameter(torch.arange(1, d_state + 1, dtype=torch.float).repeat(d_model, 1))
-        self.D = nn.Parameter(torch.ones(d_model, dtype=torch.float))
+        # delta bias
+        dt = torch.exp(
+            torch.rand(config.d_inner) * (math.log(config.dt_max) - math.log(config.dt_min)) + math.log(config.dt_min)
+        ).clamp(min=config.dt_init_floor)
+        inv_dt = dt + torch.log(-torch.expm1(-dt)) 
+        with torch.no_grad():
+            self.dt_proj.bias.copy_(inv_dt)
+
+        A = torch.arange(1, config.d_state + 1, dtype=torch.float32).repeat(config.d_inner, 1)
+        self.A_log = nn.Parameter(torch.log(A)) 
+        self.A_log._no_weight_decay = True
+
+        self.D = nn.Parameter(torch.ones(config.d_inner))
+        self.D._no_weight_decay = True
+
+        self.out_proj = nn.Linear(config.d_inner, config.d_model, bias=config.bias)
+
+        if self.config.inner_layernorms:
+            self.dt_layernorm = RMSNorm(self.config.dt_rank, config.rms_norm_eps, config.mup)
+            self.B_layernorm = RMSNorm(self.config.d_state, config.rms_norm_eps, config.mup)
+            self.C_layernorm = RMSNorm(self.config.d_state, config.rms_norm_eps, config.mup)
+        else:
+            self.dt_layernorm = None
+            self.B_layernorm = None
+            self.C_layernorm = None
+
+        if self.config.use_cuda:
+            try:
+                from mamba_ssm.ops.selective_scan_interface import selective_scan_fn
+                self.selective_scan_cuda = selective_scan_fn
+            except ImportError:
+                print("Failed to import mamba_ssm. Falling back to mamba.py.")
+                self.config.use_cuda = False
+
+    def _apply_layernorms(self, dt, B, C):
+        if self.dt_layernorm is not None:
+            dt = self.dt_layernorm(dt)
+        if self.B_layernorm is not None:
+            B = self.B_layernorm(B)
+        if self.C_layernorm is not None:
+            C = self.C_layernorm(C)
+        return dt, B, C
+
+    def forward(self, x, c):
+        _, L, _ = x.shape
+
+        xz = self.in_proj(x) 
+        x, z = xz.chunk(2, dim=-1) 
+
+        x = x.transpose(1, 2) 
+        x = self.conv1d(x)[:, :, :L] 
+        x = x.transpose(1, 2) 
+
+        x = F.silu(x)
+        y = self.ssm(x, c, z)
+
+        if self.config.use_cuda:
+            output = self.out_proj(y) 
+            return output 
+
+        z = F.silu(z)
+
+        output = y * z
+        output = self.out_proj(output) 
+
+        return output
+    
+    def ssm(self, x, c, z):
+
+        A = -torch.exp(self.A_log.float()) 
+        D = self.D.float()
+
+        deltaBC = self.x_proj(x) 
+        delta, B, C = torch.split(deltaBC, [self.config.dt_rank, self.config.d_state, self.config.d_state], dim=-1) 
+    
+
+        # ===== MODULATION PROJECTION ===== #
+        gamma_B, beta_B = self.context_B(c).chunk(2, dim=-1)      # shape: (batch_size, d_state)
+        gamma_C, beta_C = self.context_C(c).chunk(2, dim=-1)      # shape: (batch_size, d_state)
+        # ================================= #
+
+
+        # ===== MODULATION APPLICATION ===== #
+        B = B * gamma_B.unsqueeze(1) + beta_B.unsqueeze(1)  # shape: (batch_size, seq_len, d_state)
+        C = C * gamma_C.unsqueeze(1) + beta_C.unsqueeze(1)  # shape: (batch_size, seq_len, d_state)
+        # =================================== #
+
+
+        delta, B, C = self._apply_layernorms(delta, B, C)
+        delta = self.dt_proj.weight @ delta.transpose(1, 2) 
         
-        # Whether to use or not the parallel scan for the SSM
-        self.parallel = parallel
+        if self.config.use_cuda:
+            x = x.transpose(1, 2)
+            B = B.transpose(1, 2)
+            C = C.transpose(1, 2)
+            z = z.transpose(1, 2)
+
+            y = self.selective_scan_cuda(x, delta, A, B, C, D, z=z, delta_softplus=True, delta_bias=self.dt_proj.bias.float())
+            y = y.transpose(1, 2) 
         
-    def forward(self, seq : Tensor, context : Tensor, cache : Cache = None) -> Tuple[Tensor, Cache]:
-        '''
-        Forward pass of the MambaBlock.
+        else:
+            delta = delta.transpose(1, 2)
+            delta = F.softplus(delta + self.dt_proj.bias)
+
+            if self.config.pscan:
+                y = self.selective_scan(x, delta, A, B, C, D)
+            else:
+                y = self.selective_scan_seq(x, delta, A, B, C, D)
+
+        return y
+    
+    def selective_scan(self, x, delta, A, B, C, D):
+
+        deltaA = torch.exp(delta.unsqueeze(-1) * A) 
+        deltaB = delta.unsqueeze(-1) * B.unsqueeze(2) 
+
+        BX = deltaB * (x.unsqueeze(-1)) 
         
-        Args:
-            seq (Tensor): Input sequence of shape (batch_size, seq_len, d_seq).
+        hs = pscan(deltaA, BX)
+
+        y = (hs @ C.unsqueeze(-1)).squeeze(3) 
+
+        y = y + D * x
+
+        return y
+    
+    def selective_scan_seq(self, x, delta, A, B, C, D):
+
+        _, L, _ = x.shape
+
+        deltaA = torch.exp(delta.unsqueeze(-1) * A) 
+        deltaB = delta.unsqueeze(-1) * B.unsqueeze(2) 
+
+        BX = deltaB * (x.unsqueeze(-1)) 
+
+        h = torch.zeros(x.size(0), self.config.d_inner, self.config.d_state, device=deltaA.device) 
+        hs = []
+
+        for t in range(0, L):
+            h = deltaA[:, t] * h + BX[:, t]
+            hs.append(h)
             
-        Returns:
-            Tensor: Output sequence of shape (batch_size, seq_len, d_seq).
-        '''
-        b, l, d = seq.shape
-        
-        (prev_hid, prev_inp) = default(cache, (None, None))
-        
-        # Project the input sequence from d_seq to d_model and into two
-        # distinct branches, one for the SSM and the residual branch
-        # (see Fig. 3 of the Mamba paper). The resulting shapes are:
-        # a: (batch_size, seq_len, d_model), b: (batch_size, seq_len, d_model)
-        a, b = self.in_proj(seq).chunk(2, dim=-1)
-        
-        # * The SSM branch
-        # Apply the convolutional layer to the SSM branch
-        # NOTE: We need to move the channel dimension to the second dimension
-        #       for the convolution to work properly, hence the rearrange
-        x = rearrange(a, 'b l d -> b d l')
+        hs = torch.stack(hs, dim=1) 
 
-        x = x if prev_inp is None else torch.cat((prev_inp, x), dim=-1)
-        a = self.conv(x)[..., :l] # Crop the output to the original length
-        a = rearrange(a, 'b d l -> b l d')
-        
-        # Apply the SSM
-        a = silu(a)
-        a, hid = self.ssm(a, context, prev_hid=prev_hid) 
-        
-        # * The residual branch
-        b = silu(b)
-        
-        # Combine the two branches
-        out = a * b
-        out =  self.out_proj(out)
-        
-        # Update the cache for next call if provided
-        if cache:
-            # Drop the first element of the hidden input states and attach
-            # the newly computed results from the convolutions
-            cache = (hid.squeeze(), x[..., 1:]) # type: ignore
-        
-        return out, cache
+        y = (hs @ C.unsqueeze(-1)).squeeze(3) 
+
+        y = y + D * x
+
+        return y
     
-    def ssm(self, seq : Tensor, context : Tensor, prev_hid : Tensor | None) -> Tuple[Tensor, Tensor]:
-        '''
-        State Space Model (SSM) of the MambaBlock.
+    def step(self, x, cache):
         
-        Args:
-            seq (Tensor): Input tensor of shape (batch_size, seq_len, d_model).
-            
-        Returns:
-            Tensor: Output tensor of shape (batch_size, seq_len, d_model).
-        '''
+        h, inputs = cache
         
-        # Compute the context-dependent projections
-        A = -self.A # shape: (d_model, d_state)
-        D = +self.D # shape: (d_model, )
-        
-        gamma_B, beta_B = self.context_B(context).chunk(2, dim=-1)
-        gamma_C, beta_C = self.context_C(context).chunk(2, dim=-1)
+        xz = self.in_proj(x) 
+        x, z = xz.chunk(2, dim=1) 
 
-        B = self.s_B(seq) * gamma_B.unsqueeze(1) + beta_B.unsqueeze(1)               # shape: (batch_size, seq_len, d_state)
-        C = self.s_C(seq) * gamma_C.unsqueeze(1) + beta_C.unsqueeze(1)               # shape: (batch_size, seq_len, d_state)
-        Δ = softplus(D + self.s_D(seq)) # shape: (batch_size, seq_len, d_model)
+        x_cache = x.unsqueeze(2)
+        x = self.conv1d(torch.cat([inputs, x_cache], dim=2))[:, :, self.config.d_conv-1] 
+
+        x = F.silu(x)
+        y, h = self.ssm_step(x, h)
+
+        z = F.silu(z)
+
+        output = y * z
+        output = self.out_proj(output) 
+
+        inputs = torch.cat([inputs[:, :, 1:], x_cache], dim=2) 
+        cache = (h, inputs)
         
-        # Discretize the A and B parameters using Δ
-        A_bar = einsum(torch.exp(A), Δ, 'd s,   b l d -> b l d s')
-        B_bar = einsum(          B,  Δ, 'b l s, b l d -> b l d s')
-        
-        X_bar = einsum(B_bar, seq, 'b l d s, b l d -> b l d s')
-        
-        # Compute the state space hidden states
-        # NOTE: This can be done either sequentially (slow) or with
-        # a parallel scan (fast)
-        hid = self._hid_states(
-            A_bar,
-            X_bar,
-            parallel=self.parallel,
-            prev_hid=prev_hid,    
-        )
-        
-        # Compute the output based on the hidden states
-        out = einsum(hid, C, 'b l d s, b l s -> b l d')
+        return output, cache
+
+    def ssm_step(self, x, h):
+
+        A = -torch.exp(self.A_log.float()) 
+        D = self.D.float()
+
+        deltaBC = self.x_proj(x) 
+
+        delta, B, C = torch.split(deltaBC, [self.config.dt_rank, self.config.d_state, self.config.d_state], dim=-1) 
+        delta, B, C = self._apply_layernorms(delta, B, C)
+        delta = F.softplus(self.dt_proj(delta)) 
+
+        deltaA = torch.exp(delta.unsqueeze(-1) * A) 
+        deltaB = delta.unsqueeze(-1) * B.unsqueeze(1) 
+
+        BX = deltaB * (x.unsqueeze(-1)) 
+
+        if h is None:
+            h = torch.zeros(x.size(0), self.config.d_inner, self.config.d_state, device=deltaA.device) 
+
+        h = deltaA * h + BX 
+
+        y = (h @ C.unsqueeze(-1)).squeeze(2) 
+
+        y = y + D * x
+
+        return y, h
+
+class RMSNorm(nn.Module):
+    def __init__(self, d_model: int, eps: float = 1e-5, use_mup: bool = False):
+        super().__init__()
+
+        self.use_mup = use_mup
+        self.eps = eps
+
+        if not use_mup:
+            self.weight = nn.Parameter(torch.ones(d_model))
+
+    def forward(self, x):
+        output = x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+
+        if not self.use_mup:
+            return output * self.weight
+        else:
+            return output
     
-        out = out + D * seq
-        
-        return out, hid
-    
-    def _hid_states(
-        self,
-        A : Tensor,
-        X : Tensor,
-        parallel : bool = False,
-        prev_hid : Tensor | None = None,
-    ) -> Tensor:
-        '''
-        Calculate the hidden states of the SSM.
-
-        Args:
-            A (Tensor): The tensor representing A_bar.
-            X (Tensor): The tensor representing X.
-            parallel (bool): Whether to use parallel scan or 
-                sequential computation (slower).
-
-        Returns:
-            Tensor: The tensor representing the hidden states.
-        '''
-        b, l, d, s = A.shape
-        
-        A = rearrange(A, 'b l d s -> l b d s')
-        X = rearrange(X, 'b l d s -> l b d s')
-        
-        if prev_hid is not None:
-            # If we have a previous hidden state it means we are running the
-            # efficient auto-regressive inference, so we expect both A and X
-            # to have a trivial length of 1, we just drop it when returning
-            return rearrange(A * prev_hid + X, 'l b d s -> b l d s')
-        
-        h = None if parallel else torch.zeros(b, d, s, device=self.device)
-        
-        return pscan(A, X) if parallel else torch.stack([
-            h := A_t * h + X_t
-            for A_t, X_t in zip(A, X)
-        ], dim=1)
-
-    @property
-    def device(self) -> torch.device:
-        '''
-        Get the device of the model.
-
-        Returns:
-            torch.device: The device of the model.
-        '''
-        return next(self.parameters()).device
