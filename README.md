@@ -57,8 +57,8 @@ We conducted additional tests as well in order to validate our approach. It's re
 | Nomic – Mamba w/o FiLM      | 0.791    | 0.741  | 0.914   |
 | **Nomic – Mamba FiLM (Ours)** | **0.929** | **0.929** | **0.989** |
 
-*Models are represented as Encoder - Decoder*
-*The Transformer head used was 2.2M params while the Mamba FiLM head was 1.8M Params*
+> *Models are represented as Encoder - Decoder*
+> *The Transformer head used was 2.2M params while the Mamba FiLM head was 1.8M Params*
 
 - **BERT - Mamba FiLM:** This test was conducted to show how the choice to use a Nomic Embedder was valid and supports our hypothesis that its semantic training allows it to aid in classification better.
 - **Nomic - Mamba w/o FiLM:** This shows how the FiLM selection function was critical to the function of the model to discern reviews from relevant to irrelevant. It proves that our model is not simply learning patterns in the reviews but rather using the modulation to learn how the reviews are linked to locations to classify from there.
