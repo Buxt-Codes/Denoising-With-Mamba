@@ -1,10 +1,10 @@
 # **Denoising With Mamba**
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![TikTok TechJam 2025: 🥈 1st Runner Up](https://img.shields.io/badge/TikTok%20TechJam%202025-Silver%20Medal%20%7C%201st%20Runner%20Up-lightgrey)](https://devpost.com/software/denoising-reviews-with-mamba)
+[![TikTok TechJam 2025: 🥈 1st Runner Up](https://img.shields.io/badge/TikTok%20TechJam%202025-%F0%9F%A5%88%201st%20Runner%20Up-gold)](https://devpost.com/software/denoising-reviews-with-mamba)
 
 ## **TikTok TechJam 2025: 🥈 1st Runner Up**
-> We are thrilled to announce that our project has managed to get 2nd place in the TikTok TechJam 2025
-> [🔗 View on Devpost](https://devpost.com/software/denoising-reviews-with-mamba)
+> We are thrilled to announce that our project has managed to get 2nd place in the TikTok TechJam 2025!  
+> [🔗 View on Devpost](https://devpost.com/software/denoising-reviews-with-mamba)  
 
 # **Overview**
 The task of review classification requires models that are both highly accurate and scalable to large volumes of user-generated content. Our solution is a two-stage pipeline consisting of a Nomic embedder (encoder) [[1]] and a modified Mamba-based decoder [[2]]. This architecture was designed to balance computational efficiency, accuracy and scalability.
