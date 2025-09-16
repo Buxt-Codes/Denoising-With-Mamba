@@ -1,5 +1,5 @@
 # **Denoising With Mamba**
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen)](LICENSE)
 [![TikTok TechJam 2025: 🥈 1st Runner Up](https://img.shields.io/badge/TikTok%20TechJam%202025-%F0%9F%A5%88%201st%20Runner%20Up-gold)](https://devpost.com/software/denoising-reviews-with-mamba)
 
 ## **TikTok TechJam 2025: 🥈 1st Runner Up**
